@@ -1,6 +1,6 @@
 from setuptools import setup
 
-setup(name='pyroxy-real',
+setup(name='pyroxy-real2',
       version="1.0b5",
       packages=['PyRoxy', 'PyRoxy.GeoIP', 'PyRoxy.Tools', 'PyRoxy.Exceptions'],
       url='https://github.com/MHProDev/PyRoxy',
