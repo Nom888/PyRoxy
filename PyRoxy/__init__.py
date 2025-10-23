@@ -6,6 +6,7 @@ from multiprocessing import cpu_count
 from pathlib import Path
 from socket import socket, SOCK_STREAM, AF_INET, gethostbyname
 from typing import AnyStr, Set, Collection, Any
+import json
 
 from socks import socksocket, SOCKS4, SOCKS5, HTTP
 from yarl import URL
@@ -98,7 +99,6 @@ class Proxy(object):
             return True
         raise ProxyInvalidHost(host)
 
-    # noinspection PyShadowingBuiltins
     def open_socket(self,
                     family=AF_INET,
                     type=SOCK_STREAM,
@@ -119,18 +119,32 @@ class Proxy(object):
             "https": self.__str__().replace("http://", "https://")
         }
 
-    # noinspection PyUnreachableCode
-    def check(self, url: Any = "https://httpbin.org/get", timeout=5):
+    def check(self, url: Any = "http://gw.sandboxol.com/server-time", timeout=5):
         if not isinstance(url, URL): url = URL(url)
         with suppress(Exception):
             with self.open_socket() as sock:
                 sock.settimeout(timeout)
                 sock.connect((url.host, url.port or 80))
+                request = (
+                    f"GET {url.path_qs} HTTP/1.1\r\n"
+                    f"Host: {url.host}\r\n"
+                    f"Connection: close\r\n\r\n"
+                ).encode()
+                sock.sendall(request)
+
+                response = b''
+                while True:
+                    chunk = sock.recv(4096)
+                    if not chunk:
+                        break
+                    response += chunk
+                
+                body = response.split(b'\r\n\r\n', 1)[1]
+                json.loads(body)
                 return True
         return False
 
 
-# noinspection PyShadowingBuiltins
 class ProxySocket(socksocket):
 
     def __init__(self,
@@ -163,7 +177,7 @@ class ProxyChecker:
 
     @staticmethod
     def checkAll(proxies: Collection[Proxy],
-                 url: Any = "https://httpbin.org/get",
+                 url: Any = "http://gw.sandboxol.com/server-time",
                  timeout=5,
                  threads=1000):
         with ThreadPoolExecutor(
